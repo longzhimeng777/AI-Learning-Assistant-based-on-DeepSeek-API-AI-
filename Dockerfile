@@ -8,6 +8,8 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV FLASK_ENV=production
+ENV PORT=5000
+ENV HOST=0.0.0.0
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y \
@@ -28,11 +30,11 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # 暴露端口
-EXPOSE 5000
+EXPOSE 8888
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/api/health || exit 1
+    CMD curl -f http://localhost:${PORT:-5000}/api/health || exit 1
 
 # 启动命令
 CMD ["python", "app.py"]
