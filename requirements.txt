@@ -1,0 +1,25 @@
+# Web框架
+Flask==2.3.3
+Werkzeug==2.3.7
+
+# API请求
+requests==2.31.0
+
+# 环境变量管理
+python-dotenv==1.0.0
+
+# 代码检查和格式化
+black==23.9.1
+flake8==6.0.0
+mypy==1.5.1
+isort==5.12.0
+
+# 测试框架
+pytest==7.4.2
+pytest-cov==4.1.0
+
+# 类型注解支持
+types-requests==2.31.0.10
+
+# 开发工具
+click==8.1.7
