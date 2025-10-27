@@ -119,7 +119,8 @@ class TestDeepSeekClient(unittest.TestCase):
         client = DeepSeekClient()
         with self.assertRaises(Exception):
             client.chat_completion("测试消息")
-        mock_openai.return_value.chat.completions.create.assert_called_once()
+        create = mock_openai.return_value.chat.completions.create
+        create.assert_called_once()
 
 
 if __name__ == "__main__":

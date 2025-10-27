@@ -198,7 +198,12 @@ def main() -> None:
     mlflow.set_tag("dataset_version", dataset_id)
     mlflow.set_tag("dataset_rows", str(len(dataframe)))
 
-    train_and_log(dataframe, arguments.exp, run_name, max_iter=arguments.max_iter)
+    train_and_log(
+        dataframe,
+        arguments.exp,
+        run_name,
+        max_iter=arguments.max_iter,
+    )
 
 
 if __name__ == "__main__":
