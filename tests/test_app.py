@@ -1,158 +1,128 @@
-
 #!/usr/bin/env python3
-"""
-AI学习助手测试文件
-"""
+"""Unit tests for AI Learning Assistant."""
 
 import os
 import unittest
 from unittest.mock import MagicMock, patch
 
+import app as app_module
 from app import DeepSeekClient, app
 
 
-class TestApp(unittest.TestCase):
-    """应用测试类"""
+class TestAppEndpoints(unittest.TestCase):
+    """Tests for Flask routes using a mocked DeepSeek client."""
 
-    def setUp(self):
-        """测试前设置"""
-        self.app = app.test_client()
-        self.app.testing = True
+    def setUp(self) -> None:
+        os.environ["DEEPSEEK_API_KEY"] = "test_key"
+        self.client = app.test_client()
+        self.client.testing = True
+        app_module.deepseek_client = MagicMock()
 
-    def test_index_route(self):
-        """测试主页路由"""
-        response = self.app.get("/")
+    def test_index_route_returns_html(self) -> None:
+        response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"AI", response.data)
 
-    def test_health_check(self):
-        """测试健康检查接口"""
-        response = self.app.get("/api/health")
-        self.assertEqual(response.status_code, 200)
-
+    def test_health_endpoint_with_mocked_client(self) -> None:
+        response = self.client.get("/api/health")
         data = response.get_json()
-        self.assertIn("status", data)
-        self.assertIn("deepseek_configured", data)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(data["status"], "healthy")
+        self.assertTrue(data["deepseek_configured"])
 
-    @patch("app.requests.post")
-    def test_chat_endpoint_success(self, mock_post):
-        """测试聊天接口成功情况"""
-        # 模拟API响应
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "这是一个测试回复"}}],
-            "usage": {"total_tokens": 50},
+    def test_chat_success(self) -> None:
+        app_module.deepseek_client.chat_completion.return_value = {
+            "choices": [{"message": {"content": "测试回复"}}],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 40,
+                "total_tokens": 50,
+            },
         }
-        mock_post.return_value = mock_response
-
-        # 发送请求
-        response = self.app.post("/api/chat", json={"message": "你好"})
-
+        response = self.client.post(
+            "/api/chat",
+            json={"message": "你好"},
+        )
         self.assertEqual(response.status_code, 200)
-        data = response.get_json()
-        self.assertIn("reply", data)
-        self.assertIn("usage", data)
-        self.assertEqual(data["reply"], "这是一个测试回复")
+        payload = response.get_json()
+        self.assertEqual(payload["reply"], "测试回复")
+        self.assertIn("usage", payload)
 
-    def test_chat_endpoint_missing_message(self):
-        """测试聊天接口缺少message参数"""
-        response = self.app.post("/api/chat", json={})
-
+    def test_chat_missing_message(self) -> None:
+        response = self.client.post("/api/chat", json={})
         self.assertEqual(response.status_code, 400)
-        data = response.get_json()
-        self.assertIn("error", data)
+        self.assertIn("error", response.get_json())
 
-    @patch("app.requests.post")
-    def test_chat_endpoint_api_error(self, mock_post):
-        """测试聊天接口API错误"""
-        # 模拟API错误
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.raise_for_status.side_effect = Exception("API错误")
-        mock_post.return_value = mock_response
-
-        response = self.app.post("/api/chat", json={"message": "测试消息"})
-
+    def test_chat_handles_exception(self) -> None:
+        chat = app_module.deepseek_client.chat_completion
+        chat.side_effect = Exception("API错误")
+        response = self.client.post(
+            "/api/chat",
+            json={"message": "测试消息"},
+        )
         self.assertEqual(response.status_code, 500)
-        data = response.get_json()
-        self.assertIn("error", data)
+        self.assertIn("error", response.get_json())
 
-    def test_404_error_handler(self):
-        """测试404错误处理"""
-        response = self.app.get("/nonexistent")
-
+    def test_not_found_handler(self) -> None:
+        response = self.client.get("/not-exist")
         self.assertEqual(response.status_code, 404)
-        data = response.get_json()
-        self.assertIn("error", data)
+        self.assertIn("error", response.get_json())
 
 
 class TestDeepSeekClient(unittest.TestCase):
-    """DeepSeek客户端测试类"""
+    """Tests for DeepSeekClient logic with OpenAI SDK mocked."""
 
-    def setUp(self):
-        """测试前设置"""
-        # 设置环境变量
+    def setUp(self) -> None:
         os.environ["DEEPSEEK_API_KEY"] = "test_key"
-        self.client = DeepSeekClient()
 
-    def test_init_without_api_key(self):
-        """测试没有API密钥时的初始化"""
-        # 临时移除API密钥
+    def test_init_without_api_key_raises(self) -> None:
         original_key = os.environ.pop("DEEPSEEK_API_KEY", None)
+        try:
+            with self.assertRaises(ValueError):
+                DeepSeekClient()
+        finally:
+            if original_key:
+                os.environ["DEEPSEEK_API_KEY"] = original_key
 
-        with self.assertRaises(ValueError):
-            DeepSeekClient()
-
-        # 恢复环境变量
-        if original_key:
-            os.environ["DEEPSEEK_API_KEY"] = original_key
-
-    @patch("app.requests.post")
-    def test_chat_completion_success(self, mock_post):
-        """测试聊天补全成功"""
-        # 模拟API响应
+    @patch("app.OpenAI")
+    def test_chat_completion_success(self, mock_openai: MagicMock) -> None:
+        mock_choice = MagicMock()
+        mock_choice.message.role = "assistant"
+        mock_choice.message.content = "测试回复"
         mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "测试回复"}}]
-        }
-        mock_post.return_value = mock_response
+        mock_response.choices = [mock_choice]
+        mock_response.usage.prompt_tokens = 12
+        mock_response.usage.completion_tokens = 18
+        mock_response.usage.total_tokens = 30
+        completions = mock_openai.return_value.chat.completions
+        create = completions.create
+        create.return_value = mock_response
 
-        response = self.client.chat_completion("测试消息")
+        client = DeepSeekClient()
+        result = client.chat_completion(
+            "测试消息",
+            max_tokens=128,
+            temperature=0.7,
+        )
 
-        self.assertIn("choices", response)
-        self.assertEqual(response["choices"][0]["message"]["content"], "测试回复")
+        self.assertEqual(
+            result["choices"][0]["message"]["content"],
+            "测试回复",
+        )
+        self.assertEqual(result["usage"]["total_tokens"], 30)
+        mock_openai.assert_called_once()
 
-        # 验证请求参数
-        mock_post.assert_called_once()
-        call_args = mock_post.call_args
-        self.assertIn("headers", call_args.kwargs)
-        self.assertIn("json", call_args.kwargs)
-
-    @patch("app.requests.post")
-    def test_chat_completion_with_parameters(self, mock_post):
-        """测试带参数的聊天补全"""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"choices": [{"message": {"content": "回复"}}]}
-        mock_post.return_value = mock_response
-
-        # 验证参数传递
-        call_args = mock_post.call_args
-        request_data = call_args.kwargs["json"]
-
-        self.assertEqual(request_data["max_tokens"], 100)
-        self.assertEqual(request_data["temperature"], 0.8)
-
-    @patch("app.requests.post")
-    def test_chat_completion_request_exception(self, mock_post):
-        """测试请求异常"""
-        mock_post.side_effect = Exception("网络错误")
-
+    @patch("app.OpenAI")
+    def test_chat_completion_propagates_error(self, mock_openai: MagicMock) -> None:
+        mock_openai.return_value.chat.completions.create.side_effect = Exception(
+            "timeout"
+        )
+        client = DeepSeekClient()
         with self.assertRaises(Exception):
-            self.client.chat_completion("测试消息")
+            client.chat_completion("测试消息")
+        completions = mock_openai.return_value.chat.completions
+        create = completions.create
+        create.assert_called_once()
 
 
 if __name__ == "__main__":

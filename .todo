@@ -1,3 +1,2 @@
-- [x] 检查后端日志获取DeepSeek请求错误详情
-- [x] 验证DeepSeek API密钥与网络配置
-- [x] 提供修复方案并指导用户测试
+- [x] 修复 CI black 报告的 Python 文件格式
+- [ ] 推送修复以重新触发 CI
