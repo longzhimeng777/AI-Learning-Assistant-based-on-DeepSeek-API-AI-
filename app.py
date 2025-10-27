@@ -5,7 +5,7 @@ AI Learning Assistant - 基于DeepSeek API的智能学习助手
 
 import logging
 import os
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 from flask import (
@@ -17,6 +17,7 @@ from flask import (
     stream_with_context,
 )
 from openai import OpenAI
+from flask.typing import ResponseReturnValue
 
 # 加载环境变量
 load_dotenv()
@@ -191,7 +192,7 @@ def health_check() -> ResponseReturnValue:
 
 
 @app.errorhandler(404)
-def not_found(error):
+def not_found(error) -> ResponseReturnValue:
     return jsonify({"error": "资源未找到"}), 404
 
 
