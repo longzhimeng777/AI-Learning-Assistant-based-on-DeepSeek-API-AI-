@@ -111,7 +111,9 @@ def load_dataset(path: str | None, autosample: bool) -> Tuple[pd.DataFrame, str]
     if "text" not in dataframe.columns or "label" not in dataframe.columns:
         raise ValueError("Dataset must contain 'text' and 'label' columns")
 
-    dataframe = dataframe.dropna(subset=["text", "label"]).astype({"text": str, "label": str})
+    dataframe = dataframe.dropna(subset=["text", "label"]).astype(
+        {"text": str, "label": str}
+    )
 
     head_preview = dataframe.head(5).to_json(orient="records", force_ascii=False)
     tail_preview = dataframe.tail(5).to_json(orient="records", force_ascii=False)
@@ -120,7 +122,9 @@ def load_dataset(path: str | None, autosample: bool) -> Tuple[pd.DataFrame, str]
     return dataframe, dataset_id
 
 
-def train_and_log(dataframe: pd.DataFrame, experiment_name: str, run_name: str, max_iter: int = 200) -> None:
+def train_and_log(
+    dataframe: pd.DataFrame, experiment_name: str, run_name: str, max_iter: int = 200
+) -> None:
     features = dataframe["text"].astype(str).tolist()
     labels = dataframe["label"].astype(str).tolist()
 

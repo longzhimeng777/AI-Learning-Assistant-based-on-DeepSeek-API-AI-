@@ -83,12 +83,14 @@ def generate_dataset(size_per_label: int, seed: int = 42) -> pd.DataFrame:
         for _ in range(size_per_label):
             text = augment_text(random.choice(samples))
             lang = "zh" if "?" in text or any(ord(c) > 127 for c in text) else "en"
-            rows.append({
-                "text": text,
-                "label": label,
-                "source": "synthetic",
-                "lang": lang,
-            })
+            rows.append(
+                {
+                    "text": text,
+                    "label": label,
+                    "source": "synthetic",
+                    "lang": lang,
+                }
+            )
     df = pd.DataFrame(rows)
     return df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
@@ -96,7 +98,9 @@ def generate_dataset(size_per_label: int, seed: int = 42) -> pd.DataFrame:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--size", type=int, default=120, help="Number of samples per label")
+    parser.add_argument(
+        "--size", type=int, default=120, help="Number of samples per label"
+    )
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 

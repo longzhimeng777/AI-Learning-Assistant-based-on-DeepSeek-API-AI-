@@ -8,7 +8,14 @@ import os
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
-from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    render_template,
+    request,
+    stream_with_context,
+)
 from openai import OpenAI
 
 # 加载环境变量
@@ -67,12 +74,17 @@ class DeepSeekClient:
 
         usage = {
             "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-            "completion_tokens": response.usage.completion_tokens if response.usage else 0,
+            "completion_tokens": response.usage.completion_tokens
+            if response.usage
+            else 0,
             "total_tokens": response.usage.total_tokens if response.usage else 0,
         }
         content = response.choices[0].message.content if response.choices else ""
         role = response.choices[0].message.role if response.choices else "assistant"
-        return {"choices": [{"message": {"role": role, "content": content}}], "usage": usage}
+        return {
+            "choices": [{"message": {"role": role, "content": content}}],
+            "usage": usage,
+        }
 
 
 try:
@@ -141,7 +153,7 @@ def chat_stream() -> Response:
 
     @stream_with_context
     def generate():
-        yield "event: start\n" + "data: {\"status\": \"start\"}\n\n"
+        yield "event: start\n" + 'data: {"status": "start"}\n\n'
         try:
             stream = deepseek_client.client.chat.completions.create(
                 model="deepseek-chat",
@@ -156,11 +168,15 @@ def chat_stream() -> Response:
             for event in stream:
                 delta = getattr(event.choices[0].delta, "content", None)
                 if delta:
-                    yield "data: " + json.dumps({"delta": delta}, ensure_ascii=False) + "\n\n"
+                    yield "data: " + json.dumps(
+                        {"delta": delta}, ensure_ascii=False
+                    ) + "\n\n"
             yield "event: end\n" + "data: {}\n\n"
         except Exception as exc:
             err = str(exc)
-            yield "event: error\n" + "data: " + json.dumps({"error": err}, ensure_ascii=False) + "\n\n"
+            yield "event: error\n" + "data: " + json.dumps(
+                {"error": err}, ensure_ascii=False
+            ) + "\n\n"
 
     import json
 
@@ -169,7 +185,9 @@ def chat_stream() -> Response:
 
 @app.route("/api/health")
 def health_check() -> Response:
-    return jsonify({"status": "healthy", "deepseek_configured": deepseek_client is not None})
+    return jsonify(
+        {"status": "healthy", "deepseek_configured": deepseek_client is not None}
+    )
 
 
 @app.errorhandler(404)

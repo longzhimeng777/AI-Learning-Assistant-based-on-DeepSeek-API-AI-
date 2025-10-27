@@ -94,7 +94,9 @@ class TestDeepSeekClient(unittest.TestCase):
 
     @patch("app.OpenAI")
     def test_chat_completion_propagates_error(self, mock_openai: MagicMock) -> None:
-        mock_openai.return_value.chat.completions.create.side_effect = Exception("timeout")
+        mock_openai.return_value.chat.completions.create.side_effect = Exception(
+            "timeout"
+        )
         client = DeepSeekClient()
         with self.assertRaises(Exception):
             client.chat_completion("测试消息")
