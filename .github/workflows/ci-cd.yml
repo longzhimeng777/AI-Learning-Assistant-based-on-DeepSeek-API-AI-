@@ -37,7 +37,7 @@ jobs:
         pip install black
         black --check .
 
-    - name: Run linting
+    - name: Lint with flake8
       run: |
         pip install flake8
         flake8 .
@@ -45,11 +45,12 @@ jobs:
     - name: Run type checking
       run: |
         pip install mypy
-        mypy .
+        mypy app.py tests
 
     - name: Run tests
       run: |
         pip install pytest pytest-cov
+        export PYTHONPATH=.
         pytest --cov=. --cov-report=xml --cov-report=term-missing
 
     - name: Upload coverage reports to Codecov

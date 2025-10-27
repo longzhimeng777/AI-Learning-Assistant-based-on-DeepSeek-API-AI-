@@ -20,7 +20,7 @@ RUN python -m pip install --upgrade pip setuptools wheel \
     && pip install --no-cache-dir --default-timeout=60 --retries 5 -r requirements.txt
 
 # 复制应用代码
-COPY . .
+COPY app.py
 
 # 创建非root用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

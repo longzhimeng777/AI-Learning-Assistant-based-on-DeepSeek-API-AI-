@@ -1,0 +1,16 @@
+[flake8]
+max-line-length = 200
+extend-ignore = E203, W503
+# 可选：排除迁移文件或生成代码
+exclude = 
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    env,
+    *.pyc,
+    migrations
+
+per-file-ignores =
+    ml/scripts/*.py:F401
+    ml/train.py:F401
