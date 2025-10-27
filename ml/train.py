@@ -111,7 +111,9 @@ def load_dataset(path: str | None, autosample: bool) -> Tuple[pd.DataFrame, str]
             raise ValueError(f"Unsupported dataset format: {extension}")
 
     # optional: merge built-in template
-    template_csv = os.path.join(os.path.dirname(__file__), "data", "intent_template.csv")
+    template_csv = os.path.join(
+        os.path.dirname(__file__), "data", "intent_template.csv"
+    )
     if os.path.exists(template_csv):
         frames.append(pd.read_csv(template_csv))
 
