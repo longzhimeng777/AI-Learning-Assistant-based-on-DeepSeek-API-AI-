@@ -8,7 +8,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=production
-ENV PORT=5000
+ENV PORT=8888
 ENV HOST=0.0.0.0
 
 
@@ -40,5 +40,5 @@ try:\
 except (URLError,HTTPError):\
     sys.exit(1)" 
 
-# 启动命令
-CMD ["python", "app.py"]
+# 启动命令（Gunicorn + gevent）
+CMD ["gunicorn", "-w", "2", "-k", "gevent", "-t", "60", "-b", "0.0.0.0:8888", "app:app"]

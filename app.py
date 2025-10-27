@@ -8,7 +8,7 @@ import os
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, Response, stream_with_context
 from openai import OpenAI
 import time
 import hashlib
@@ -158,6 +158,50 @@ def chat():
             return jsonify({"error": "请求频率过高，请稍后重试"}), 429
         else:
             return jsonify({"error": f"处理请求时发生错误: {error_message}"}), 500
+
+
+@app.route("/api/chat/stream", methods=["POST"])
+def chat_stream():
+    if not deepseek_client:
+        return jsonify({"error": "DeepSeek API未配置，请检查DEEPSEEK_API_KEY环境变量"}), 500
+
+    data = request.get_json()
+    if not data or "message" not in data:
+        return jsonify({"error": "缺少message参数"}), 400
+
+    message = data["message"]
+    max_tokens = data.get("max_tokens", os.getenv("MAX_TOKENS", 2048))
+    temperature = data.get("temperature", os.getenv("TEMPERATURE", 0.7))
+
+    @stream_with_context
+    def generate():
+        # SSE: 以 data: 行推送
+        yield "event: start\n" + "data: " + json.dumps({"status": "start"}) + "\n\n"
+        try:
+            stream = deepseek_client.client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant"},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=int(max_tokens),
+                temperature=float(temperature),
+                stream=True
+            )
+            for event in stream:
+                delta = None
+                try:
+                    # OpenAI SDK 1.x streaming格式
+                    delta = event.choices[0].delta.content if hasattr(event.choices[0], 'delta') else None
+                except Exception:
+                    pass
+                if delta:
+                    yield "data: " + json.dumps({"delta": delta}) + "\n\n"
+            yield "event: end\n" + "data: {}\n\n"
+        except Exception as e:
+            err = str(e)
+            yield "event: error\n" + "data: " + json.dumps({"error": err}) + "\n\n"
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @app.route("/api/health")

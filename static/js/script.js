@@ -66,17 +66,16 @@ class AILearningAssistant {
         // 显示加载动画
         this.showLoading();
         
+        // 预创建一个助手消息用于流式追加
+        const assistantDiv = this.createAssistantMessageContainer();
+        
         try {
-            // 创建超时控制器
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
-            
-            // 发送请求到后端API
-            const response = await fetch('/api/chat', {
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+            const response = await fetch('/api/chat/stream', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: message,
                     max_tokens: document.getElementById('maxTokens').value,
@@ -84,18 +83,37 @@ class AILearningAssistant {
                 }),
                 signal: controller.signal
             });
-            
+
             clearTimeout(timeoutId);
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
+
+            if (!response.ok || !response.body) {
+                const data = await response.json().catch(() => ({}));
                 throw new Error(data.error || 'Request failed');
             }
-            
-            // 添加AI回复
-            this.addMessage(data.reply, 'assistant');
-            
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                let idx;
+                while ((idx = buffer.indexOf('\n\n')) !== -1) {
+                    const chunk = buffer.slice(0, idx);
+                    buffer = buffer.slice(idx + 2);
+                    if (chunk.startsWith('data:')) {
+                        const jsonStr = chunk.replace(/^data:\s*/, '');
+                        try {
+                            const obj = JSON.parse(jsonStr);
+                            if (obj.delta) {
+                                this.appendToAssistantMessage(assistantDiv, obj.delta);
+                            }
+                        } catch (e) { /* ignore parse errors */ }
+                    }
+                }
+            }
         } catch (error) {
             console.error('Failed to send message:', error);
             let errorMessage = 'An error occurred while processing the request';
@@ -119,25 +137,18 @@ class AILearningAssistant {
     }
     
     addMessage(content, sender) {
-        // 如果是第一条消息，移除欢迎消息
         if (this.messagesContainer.querySelector('.welcome-message')) {
             this.messagesContainer.innerHTML = '';
         }
-        
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
-        
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
         avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
-        
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
-        
-        // 处理Markdown格式的回复（简单实现）
         const formattedContent = this.formatMessage(content);
         messageContent.innerHTML = formattedContent;
-        
         if (sender === 'user') {
             messageDiv.appendChild(messageContent);
             messageDiv.appendChild(avatar);
@@ -145,8 +156,33 @@ class AILearningAssistant {
             messageDiv.appendChild(avatar);
             messageDiv.appendChild(messageContent);
         }
-        
         this.messagesContainer.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    createAssistantMessageContainer() {
+        if (this.messagesContainer.querySelector('.welcome-message')) {
+            this.messagesContainer.innerHTML = '';
+        }
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        messageContent.innerHTML = '';
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(messageContent);
+        this.messagesContainer.appendChild(messageDiv);
+        this.scrollToBottom();
+        return messageDiv;
+    }
+
+    appendToAssistantMessage(assistantDiv, deltaText) {
+        const contentDiv = assistantDiv.querySelector('.message-content');
+        // 直接追加文本，再做最简清洗；可按需改成增量Markdown渲染
+        contentDiv.innerHTML += this.formatMessage(deltaText);
         this.scrollToBottom();
     }
     
