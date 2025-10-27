@@ -117,9 +117,7 @@ def load_dataset(path: str | None, autosample: bool) -> Tuple[pd.DataFrame, str]
 
     head_preview = dataframe.head(5).to_json(orient="records", force_ascii=False)
     tail_preview = dataframe.tail(5).to_json(orient="records", force_ascii=False)
-    dataset_id = sha_short(
-        f"{len(dataframe)}-{head_preview}-{tail_preview}"
-    )
+    dataset_id = sha_short(f"{len(dataframe)}-{head_preview}-{tail_preview}")
 
     return dataframe, dataset_id
 
