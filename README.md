@@ -1,10 +1,10 @@
-# AI Learning Assistant | AI学习助手
+# AI Learning Assistant based on DeepSeek API| AI学习助手
 
 A smart learning assistant powered by the DeepSeek API. | 一个基于 DeepSeek API 的智能学习助手。
 
 - English follows first; Chinese version below. | 先为英文，中文在后。
 
----
+
 
 ## English
 
