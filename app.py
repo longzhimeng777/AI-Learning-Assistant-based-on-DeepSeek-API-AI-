@@ -5,7 +5,7 @@ AI Learning Assistant - 基于DeepSeek API的智能学习助手
 
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from dotenv import load_dotenv
 from flask import (
@@ -38,7 +38,7 @@ class DeepSeekClient:
         if not self.api_key:
             raise ValueError("DEEPSEEK_API_KEY环境变量未设置")
 
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        self.client: Any = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
     def chat_completion(
         self,
@@ -52,7 +52,7 @@ class DeepSeekClient:
                 {"role": "system", "content": "You are a helpful assistant"},
                 {"role": "user", "content": message},
             ]
-            response = self.client.chat.completions.create(
+            response: Any = self.client.chat.completions.create(
                 model="deepseek-chat",
                 messages=messages,
                 max_tokens=max_tokens,
@@ -100,7 +100,7 @@ def index() -> str:
 
 
 @app.route("/api/chat", methods=["POST"])
-def chat() -> Response:
+def chat() -> ResponseReturnValue:
     if not deepseek_client:
         return jsonify({"error": "DeepSeek API未配置，请检查DEEPSEEK_API_KEY环境变量"}), 500
 
@@ -139,7 +139,7 @@ def chat() -> Response:
 
 
 @app.route("/api/chat/stream", methods=["POST"])
-def chat_stream() -> Response:
+def chat_stream() -> ResponseReturnValue:
     if not deepseek_client:
         return jsonify({"error": "DeepSeek API未配置，请检查DEEPSEEK_API_KEY环境变量"}), 500
 
@@ -155,7 +155,7 @@ def chat_stream() -> Response:
     def generate():
         yield "event: start\n" + 'data: {"status": "start"}\n\n'
         try:
-            stream = deepseek_client.client.chat.completions.create(
+            stream: Any = deepseek_client.client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant"},
@@ -184,7 +184,7 @@ def chat_stream() -> Response:
 
 
 @app.route("/api/health")
-def health_check() -> Response:
+def health_check() -> ResponseReturnValue:
     return jsonify(
         {"status": "healthy", "deepseek_configured": deepseek_client is not None}
     )
@@ -196,7 +196,7 @@ def not_found(error):
 
 
 @app.errorhandler(500)
-def internal_error(error):
+def internal_error(error) -> ResponseReturnValue:
     return jsonify({"error": "服务器内部错误"}), 500
 
 
