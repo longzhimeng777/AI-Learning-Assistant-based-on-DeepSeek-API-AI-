@@ -8,8 +8,14 @@ import os
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, g
 from openai import OpenAI
+import time
+import hashlib
+import json
+import tempfile
+import pathlib
+import mlflow
 
 # 加载环境变量
 load_dotenv()
@@ -19,6 +25,50 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# MLflow 开关与配置
+MLFLOW_ENABLED = bool(os.getenv("MLFLOW_TRACKING_URI"))
+MLFLOW_EXPERIMENT = os.getenv("MLFLOW_EXPERIMENT_NAME", "chat-api")
+
+def _mlflow_log_preview(prompt_preview: str, status_code: int, start_ts: float):
+    if not MLFLOW_ENABLED:
+        return
+    try:
+        mlflow.set_experiment(MLFLOW_EXPERIMENT)
+        with mlflow.start_run(run_name=f"chat_{int(start_ts)}"):
+            mlflow.log_params({
+                "model": "deepseek-chat",
+                "source": "flask_after_request",
+            })
+            mlflow.log_metrics({
+                "latency_ms": int((time.time() - start_ts) * 1000),
+                "status_code": int(status_code),
+            })
+            preview = {"prompt_preview": (prompt_preview or "")[:200]}
+            tmp = pathlib.Path(tempfile.gettempdir()) / f"chat_preview_{int(time.time())}.json"
+            tmp.write_text(json.dumps(preview, ensure_ascii=False, indent=2))
+            mlflow.log_artifact(str(tmp), artifact_path="summaries")
+    except Exception as le:
+        logger.warning(f"MLflow 记录失败: {le}")
+
+@app.before_request
+def _before_request():
+    if request.path == "/api/chat":
+        g._chat_start_ts = time.time()
+        try:
+            data = request.get_json(silent=True) or {}
+            g._chat_prompt_preview = (data.get("message") or "")[:200]
+        except Exception:
+            g._chat_prompt_preview = ""
+
+@app.after_request
+def _after_request(response):
+    try:
+        if request.path == "/api/chat" and hasattr(g, "_chat_start_ts"):
+            _mlflow_log_preview(getattr(g, "_chat_prompt_preview", ""), response.status_code, g._chat_start_ts)
+    except Exception as le:
+        logger.debug(f"after_request 日志异常: {le}")
+    return response
 
 
 class DeepSeekClient:
