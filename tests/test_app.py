@@ -39,7 +39,10 @@ class TestAppEndpoints(unittest.TestCase):
                 "total_tokens": 50,
             },
         }
-        response = self.client.post("/api/chat", json={"message": "你好"})
+        response = self.client.post(
+            "/api/chat",
+            json={"message": "你好"},
+        )
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
         self.assertEqual(payload["reply"], "测试回复")
@@ -53,7 +56,10 @@ class TestAppEndpoints(unittest.TestCase):
     def test_chat_handles_exception(self) -> None:
         chat = app_module.deepseek_client.chat_completion
         chat.side_effect = Exception("API错误")
-        response = self.client.post("/api/chat", json={"message": "测试消息"})
+        response = self.client.post(
+            "/api/chat",
+            json={"message": "测试消息"},
+        )
         self.assertEqual(response.status_code, 500)
         self.assertIn("error", response.get_json())
 
@@ -92,7 +98,11 @@ class TestDeepSeekClient(unittest.TestCase):
         create.return_value = mock_response
 
         client = DeepSeekClient()
-        result = client.chat_completion("测试消息", max_tokens=128, temperature=0.7)
+        result = client.chat_completion(
+            "测试消息",
+            max_tokens=128,
+            temperature=0.7,
+        )
 
         self.assertEqual(
             result["choices"][0]["message"]["content"],

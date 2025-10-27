@@ -190,9 +190,10 @@ def main() -> None:
 
     dataframe, dataset_id = load_dataset(arguments.data, arguments.autosample)
 
-    run_name = arguments.run or (
-        f"intent_{'autosample' if arguments.autosample else os.path.basename(arguments.data)}_{dataset_id}"
+    base_name = (
+        "autosample" if arguments.autosample else os.path.basename(arguments.data)
     )
+    run_name = arguments.run or f"intent_{base_name}_{dataset_id}"
 
     mlflow.set_tag("dataset_version", dataset_id)
     mlflow.set_tag("dataset_rows", str(len(dataframe)))
