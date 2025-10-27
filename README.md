@@ -27,8 +27,8 @@ Requirements: Python 3.8+, DeepSeek API key, Docker (optional)
 
 1) Clone
 ```bash
-git clone <repository-url>
-cd ai-learning-assistant
+git clone https://github.com/longzhimeng777/AI-Learning-Assistant-based-on-DeepSeek.git
+cd AI-Learning-Assistant-based-on-DeepSeek
 ```
 2) Install
 ```bash
@@ -61,7 +61,7 @@ pytest
 
 ### Project Structure
 ```
-ai-learning-assistant/
+AI-Learning-Assistant-based-on-DeepSeek/
 ├── app.py
 ├── requirements.txt
 ├── Dockerfile
@@ -95,8 +95,8 @@ ai-learning-assistant/
 
 1）克隆
 ```bash
-git clone <repository-url>
-cd ai-learning-assistant
+git clone https://github.com/longzhimeng777/AI-Learning-Assistant-based-on-DeepSeek.git
+cd AI-Learning-Assistant-based-on-DeepSeek
 ```
 2）安装依赖
 ```bash
@@ -129,7 +129,7 @@ pytest
 
 ### 项目结构
 ```
-ai-learning-assistant/
+AI-Learning-Assistant-based-on-DeepSeek/
 ├── app.py              # 主应用文件
 ├── requirements.txt    # 依赖
 ├── Dockerfile          # Docker 配置
