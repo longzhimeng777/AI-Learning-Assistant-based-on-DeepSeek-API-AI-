@@ -27,5 +27,3 @@ click==8.1.7
 # OpenAI SDK (for DeepSeek-compatible client)
 openai>=1.0.0
 
-# ML experiment tracking
-mlflow>=2.14
