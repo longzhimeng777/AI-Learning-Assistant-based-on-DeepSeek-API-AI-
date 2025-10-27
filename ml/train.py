@@ -7,6 +7,7 @@ from typing import List, Tuple
 
 import mlflow
 import mlflow.sklearn
+from mlflow.models.signature import infer_signature
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -94,19 +95,33 @@ def autosample_dataset(n_per_label: int = 30, seed: int = 42) -> pd.DataFrame:
 
 
 def load_dataset(path: str | None, autosample: bool) -> Tuple[pd.DataFrame, str]:
-    if autosample or not path:
+    if autosample and not path:
         dataframe = autosample_dataset()
         dataset_id = sha_short(f"autosample-{len(dataframe)}")
         return dataframe, dataset_id
 
-    extension = os.path.splitext(path)[1].lower()
+    frames = []
+    if path:
+        extension = os.path.splitext(path)[1].lower()
+        if extension == ".csv":
+            frames.append(pd.read_csv(path))
+        elif extension in {".jsonl", ".json"}:
+            frames.append(pd.read_json(path, lines=True))
+        else:
+            raise ValueError(f"Unsupported dataset format: {extension}")
 
-    if extension == ".csv":
-        dataframe = pd.read_csv(path)
-    elif extension in {".jsonl", ".json"}:
-        dataframe = pd.read_json(path, lines=True)
-    else:
-        raise ValueError(f"Unsupported dataset format: {extension}")
+    # optional: merge built-in template
+    template_csv = os.path.join(os.path.dirname(__file__), "data", "intent_template.csv")
+    if os.path.exists(template_csv):
+        frames.append(pd.read_csv(template_csv))
+
+    if autosample:
+        frames.append(autosample_dataset())
+
+    if not frames:
+        raise ValueError("No dataset provided or found")
+
+    dataframe = pd.concat(frames, ignore_index=True)
 
     if "text" not in dataframe.columns or "label" not in dataframe.columns:
         raise ValueError("Dataset must contain 'text' and 'label' columns")
@@ -145,7 +160,23 @@ def train_and_log(
 
     mlflow.set_experiment(experiment_name)
 
-    with mlflow.start_run(run_name=run_name):
+    # ensure clean run state
+    try:
+        while mlflow.active_run() is not None:
+            mlflow.end_run()
+    except Exception:
+        pass
+
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+    if tracking_uri:
+        mlflow.set_tracking_uri(tracking_uri)
+        mlflow.set_experiment(experiment_name)
+        mlflow.set_tag("tracking", "remote")
+    else:
+        mlflow.set_experiment(experiment_name)
+        mlflow.set_tag("tracking", "local")
+
+    with mlflow.start_run(run_name=run_name, nested=True):
         mlflow.log_params(
             {
                 "model": "LogisticRegression",
@@ -174,7 +205,15 @@ def train_and_log(
         f1_macro = f1_score(y_test, predictions, average="macro")
         mlflow.log_metrics({"accuracy": accuracy, "f1_macro": f1_macro})
 
-        mlflow.sklearn.log_model(pipeline, artifact_path="model")
+        # add input_example and signature for better model registry
+        input_example = pd.DataFrame({"text": X_test[:3]})
+        signature = infer_signature(input_example, predictions[:3])
+        mlflow.sklearn.log_model(
+            pipeline,
+            artifact_path="model",
+            input_example=input_example,
+            signature=signature,
+        )
 
 
 def main() -> None:
@@ -198,6 +237,7 @@ def main() -> None:
     )
     run_name = arguments.run or f"intent_{base_name}_{dataset_id}"
 
+    # record dataset info
     mlflow.set_tag("dataset_version", dataset_id)
     mlflow.set_tag("dataset_rows", str(len(dataframe)))
 
