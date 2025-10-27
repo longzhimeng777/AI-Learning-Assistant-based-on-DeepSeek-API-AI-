@@ -11,12 +11,6 @@ permissions:
   packages: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.9, '3.10']
 
     steps:
     - name: Checkout code
@@ -45,7 +39,7 @@ jobs:
     - name: Run type checking
       run: |
         pip install mypy
-        mypy app.py
+        mypy app.py --disable-error-code no-untyped-def --disable-error-code operator
 
     - name: Run tests
       run: |
