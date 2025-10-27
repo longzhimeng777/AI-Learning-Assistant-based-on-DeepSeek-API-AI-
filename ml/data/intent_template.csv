@@ -1,0 +1,6 @@
+text,label,source,lang
+"什么是交叉熵？通俗解释一下",概念解释,self,zh
+"How to install CUDA on Ubuntu 22.04?",工具安装配置,web,en
+"请给出 PyTorch 实现 ResNet18 的示例代码",示例代码,self,zh
+"pip 安装 torch 失败，如何解决？",工具安装配置,self,zh
+"这道数学应用题如何解题？",作业/考试题解读,self,zh
