@@ -117,7 +117,9 @@ def load_dataset(path: str | None, autosample: bool) -> Tuple[pd.DataFrame, str]
 
     head_preview = dataframe.head(5).to_json(orient="records", force_ascii=False)
     tail_preview = dataframe.tail(5).to_json(orient="records", force_ascii=False)
-    dataset_id = sha_short(f"{len(dataframe)}-{head_preview}-{tail_preview}")
+    dataset_id = sha_short(
+        f"{len(dataframe)}-{head_preview}-{tail_preview}"
+    )
 
     return dataframe, dataset_id
 
@@ -163,7 +165,10 @@ def train_and_log(
         mlflow.set_tag("git_sha", git_sha)
 
         unique_labels = sorted(set(labels))
-        mlflow.log_text("\n".join(unique_labels), artifact_file="labels.txt")
+        mlflow.log_text(
+            "\n".join(unique_labels),
+            artifact_file="labels.txt",
+        )
 
         pipeline.fit(X_train, y_train)
         predictions = pipeline.predict(X_test)

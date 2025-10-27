@@ -94,7 +94,8 @@ class TestDeepSeekClient(unittest.TestCase):
         mock_response.usage.prompt_tokens = 12
         mock_response.usage.completion_tokens = 18
         mock_response.usage.total_tokens = 30
-        create = mock_openai.return_value.chat.completions.create
+        completions = mock_openai.return_value.chat.completions
+        create = completions.create
         create.return_value = mock_response
 
         client = DeepSeekClient()
@@ -119,7 +120,8 @@ class TestDeepSeekClient(unittest.TestCase):
         client = DeepSeekClient()
         with self.assertRaises(Exception):
             client.chat_completion("测试消息")
-        create = mock_openai.return_value.chat.completions.create
+        completions = mock_openai.return_value.chat.completions
+        create = completions.create
         create.assert_called_once()
 
 
